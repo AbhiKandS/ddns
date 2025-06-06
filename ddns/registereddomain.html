@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registered Domains</title>
+    <link rel="stylesheet" href="/style/registereddomain.css">
+</head>
+<body>
+    <main>
+        <h1>Domain Registered <br>on the Chain</h1>
+        <table >
+            <thead>
+                <td>S.No</td>
+                <td>Domain Name</td>
+                <td>IP Address</td>
+            </thead>
+            <tbody id="registered-domains">
+            <tr>
+                <td>01.</td>
+                <td>www.HAA.com</td>
+                <td>192.168.1.2</td>
+            </tr>
+            <tr>
+                <td>02.</td>
+                <td>www.BAA.com</td>
+                <td>192.168.1.3</td>
+            </tr>
+            </tbody>
+        </table>
+    </main>
+
+    <script type="module">
+        import DDNSArtifact from '/artifacts/contracts/DDNS.sol/DDNS.json';
+        import Addresses from '/ignition/deployments/chain-1337/deployed_addresses.json'
+        import { Web3 } from 'web3';
+
+        let web3;
+        let acccounts = [];
+        let contract;
+
+        async function connectWallet() {
+            const metamask = window.ethereum;
+
+            while (!metamask) {
+                //TODO: await for metamask insstallation and give link to download
+                alert('Install MetaMask \n\n!!!After installatin refresh the page');
+            }
+            while (!metamask.isMetaMask) {
+                alert('a Different provider detected!\nUninstall it and Install MetaMask and refresh the page')
+            }
+
+            web3 = new Web3(metamask);
+            web3.handleRevert = true;
+
+            acccounts = await web3.eth.getAccounts();
+            if (acccounts.length === 0) {
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                acccounts = await web3.eth.getAccounts();
+            }
+            web3.eth.defaultAccount = acccounts[0]
+
+            contract = new web3.eth.Contract(
+                DDNSArtifact.abi,
+                Addresses['DDNS#DDNS']
+            );
+            contract.handleRevert = true;
+            console.log('connected account: ', acccounts[0]);
+
+            return contract;
+        }
+
+        async function getAllDomains(contract) {
+            console.log(contract);
+
+            return await contract.methods.getAllDomains().call();
+        }
+
+        await connectWallet();
+        let domainRecords = await getAllDomains(contract);
+        let table = document.querySelector('#registered-domains');
+        console.log(domainRecords);
+
+
+        table.innerHTML = '';
+        let i = 1;
+        for (const domain of domainRecords) {
+            if (domain.exists) {
+                table.innerHTML = table.innerHTML + `
+                <tr>
+                    <td>${i++}</td>
+                    <td>${domain.domain}</td>
+                    <td>${domain.ip}</td>
+                </tr>
+                    `
+            }
+        }
+    </script>
+    </body>
+    
+    </html>
